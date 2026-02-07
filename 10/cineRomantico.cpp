@@ -8,15 +8,15 @@
 using namespace std;
 
 struct Peli {
-    int inicio, fin, duracion;
+    long long inicio, fin, duracion;
 };
 
-// Comparador para ordenar las películas por su tiempo de finalización
+// Comparador para ordenar las pelï¿½culas por su tiempo de finalizaciï¿½n
 bool comparar(const Peli& a, const Peli& b) {
     return a.fin < b.fin;
 }
 
-// Función para encontrar la última película que no se solape con la película en índice `i`
+// Funciï¿½n para encontrar la ï¿½ltima pelï¿½cula que no se solape con la pelï¿½cula en ï¿½ndice `i`
 int findLastNonOverlapping(const vector<Peli>& peliculas, int i) {
     int low = 0, high = i - 1, best = -1;
     while (low <= high) {
@@ -32,52 +32,90 @@ int findLastNonOverlapping(const vector<Peli>& peliculas, int i) {
     return best;
 }
 
+/*
+RECURSION
+Parametros:
+    i es el indice de la pelï¿½cula
+    incluir es el tiempo acumulado si se incluye la pelï¿½cula i
+    idx es el ï¿½ndice de la ï¿½ltima pelï¿½cula que no se solapa con la pelï¿½cula i
+Rangos:
+    Las pelÃ­culas van del 0 al N-1
+    El vector dp va del 0 a N-1
+Casos base: 
+    dp[i] tiene valor, por lo que no se vuelve a calcular
+Casos recursivos:
+    No sabemos el valor de dp[i]. 2 casos:
+        1. No ver la pelï¿½cula i: dp[i] = dp[i-1]
+        2. Ver la pelï¿½cula i: dp[i] = duracion de la pelÃ­cula i + dp[idx] (si hay pelicula anterior)
+    dp[i] serÃ¡ el mÃ¡ximo de las 2 opciones
+*/
+
+/*
+IMPLEMENACION
+Iterativo: 
+    Como relleno el vector:
+        Voy de pelicula en pelicula viendo si renta mÃ¡s verla o no verla.
+        Por ello se rellena el vector de dp de izquierda a derecha, ya que para calcular dp[i] 
+        necesito el valor de dp[i-1] y dp[anterior pelicula que no solapa], y ambos ya los tengo calculados al ser menores que i
+*/
+
+/*
+COSTE DE RELLENADO DE LA MATRIZ:
+Tiempo: O(N) se recorre cada pelicula una unica vez
+Espacio: O(N) el vector dp tiene tamaÃ±o N, y el vector de lastNonOverlapping tambiÃ©n tiene tamaÃ±o N
+*/
+
+void programacionDinamica(vector<int> &dp,vector<int> &lastNonOverlapping, vector<Peli> &peliculas) {
+    for (int i = 1; i < dp.size(); i++) {
+            // Opciï¿½n 1: No ver la pelï¿½cula `i` (quedarse con la mejor opciï¿½n previa)
+            dp[i] = dp[i - 1];
+
+            // Opciï¿½n 2: Ver la pelï¿½cula `i`
+            int incluir = peliculas[i].duracion;
+            int idx = lastNonOverlapping[i];
+            if (idx != -1) {
+                incluir += dp[idx];  // Sumar la mejor opciï¿½n previa no solapada
+            }
+
+            // Guardar la mejor opciï¿½n entre ambas
+            dp[i] = max(dp[i], incluir);
+        }
+}
+
+
 void solve() {
     int N;
     while (cin >> N && N != 0) {
         vector<Peli> peliculas(N);
 
-        // Leer los tiempos de inicio y duración
+        // Leer los tiempos de inicio y duraciï¿½n
         for (int i = 0; i < N; i++) {
-            int h, m, duracion;
+            long long d, h, m, duracion;
             char c;
-            cin >> h >> c >> m >> duracion;
-            peliculas[i].inicio = h * 60 + m;
+            cin >> d >> h >> c >> m >> duracion;
+            peliculas[i].inicio = (d*24 +h) * 60 + m;
             peliculas[i].fin = peliculas[i].inicio + duracion + 10; // 10 minutos de pausa
             peliculas[i].duracion = duracion;
         }
 
-        // Ordenar películas por tiempo de finalización
+        // Ordenar pelï¿½culas por tiempo de finalizaciï¿½n
         sort(peliculas.begin(), peliculas.end(), comparar);
 
-        // DP para encontrar el máximo tiempo de visionado
+        // DP para encontrar el mï¿½ximo tiempo de visionado
         vector<int> dp(N);
         vector<int> lastNonOverlapping(N, -1);
 
-        // Precomputar la última película que no se solapa con cada película i
+        // Precomputar la ï¿½ltima pelï¿½cula que no se solapa con cada pelï¿½cula i
         for (int i = 0; i < N; i++) {
             lastNonOverlapping[i] = findLastNonOverlapping(peliculas, i);
         }
 
-        // Caso base: La mejor opción para la primera película es verla
+        // Caso base: La mejor opciï¿½n para la primera pelï¿½cula es verla
         dp[0] = peliculas[0].duracion;
 
-        for (int i = 1; i < N; i++) {
-            // Opción 1: No ver la película `i` (quedarse con la mejor opción previa)
-            dp[i] = dp[i - 1];
+        programacionDinamica(dp, lastNonOverlapping, peliculas);
 
-            // Opción 2: Ver la película `i`
-            int incluir = peliculas[i].duracion;
-            int idx = lastNonOverlapping[i];
-            if (idx != -1) {
-                incluir += dp[idx];  // Sumar la mejor opción previa no solapada
-            }
-
-            // Guardar la mejor opción entre ambas
-            dp[i] = max(dp[i], incluir);
-        }
-
-        // La respuesta está en dp[N-1], el mejor tiempo acumulado posible
+        // La respuesta estï¿½ en dp[N-1], el mejor tiempo acumulado posible
         cout << dp[N - 1] << endl;
     }
 }
