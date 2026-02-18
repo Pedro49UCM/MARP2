@@ -7,12 +7,24 @@
 
 using namespace std;
 
+//Descripcion del espacio de soluciones y del arbol de exploracion
+/**
+* Asigmanos a cada producto un supermercado del que comprarlo
+* Nuestro arbol de exploración será para cada uno de los n productos, m opciones para
+* asignar. => factor de ramificacin = m^n
+*
+* Funcioón de poda: 
+* - Quitamos nodos cuyo coste optimista sea mayor que la mejor cota pesimista encontrada. Es decir, nodos que no puedan mejorar el coste
+* - Quitamos nodos que no cumplan la restricción de comprar como máximo 3 productos en el mismo supermercado.
+*/
+
+
 struct Nodo {
-    int prodID;
-    int costeAcomulado;
+    int prodID;//Indice del producto a comprar
+    int costeAcomulado;//Coste acumulado hasta el producto actual
     int costeOptimista;
     int costePesimista;
-    vector<int> counterSuper;
+    vector<int> counterSuper;//vector para llevar la cuenta de cuántos productos se han comprado en cada supermercado
 };
 
 bool operator>(Nodo a, Nodo b) {
@@ -22,7 +34,8 @@ bool operator>(Nodo a, Nodo b) {
 typedef priority_queue<Nodo, vector<Nodo>, greater<Nodo>> pq;
 
 
-// C�lculo de la cota optimista con una heur�stica voraz
+// Cálculo de la cota optimista con una heurística voraz
+// La cota optimista se calcula sumando el coste minimo de todos los productos restantes.
 int cota_optimista(const int &producto, const int &supers, const vector<vector<int>> &superProducto, const int producIdx) {//O(S*P)
     int costeEstimado = 0;
     vector<int> preciosMinimos(producto, INT_MAX);
@@ -40,6 +53,8 @@ int cota_optimista(const int &producto, const int &supers, const vector<vector<i
     return costeEstimado;
 }
 
+// Cálculo de la cota optimista con una heurística voraz
+// La cota optimista se calcula sumando el coste maximo de todos los productos restantes.
 int cota_pesimista(const int& producto, const int& supers, const vector<vector<int>>& superProducto, const int producIdx) {//O(S*P)
     int costeEstimado = 0;
     vector<int> preciosMaximos(producto, INT_MIN);
@@ -67,28 +82,28 @@ int contarBits(int n) {
 }
 
 
-// Backtracking con poda optimista-pesimista
+// Ramificación con poda optimista-pesimista
 void iterativo(const int &productos, const int &supers, const vector<vector<int>>& superProducto, vector<bool>& carrito, int &costeMejor) {
     pq nodos;
     int cotaOptimista = cota_optimista(productos, supers, superProducto, 0), cotaPesimista = cota_pesimista(productos, supers, superProducto, 0);
-    nodos.push({ 0,0, cotaOptimista, cotaPesimista, vector<int>(supers, 0)});
+    nodos.push({ 0,0, cotaOptimista, cotaPesimista, vector<int>(supers, 0)});//Cargo el nodo inicial
     while (!nodos.empty()) {
         Nodo a = nodos.top(); nodos.pop();
-        if (a.prodID == productos) {
+        if (a.prodID == productos) {//Hemos cogido todos los productos, y al ser este nodo el más óptimo, quiere decir que es la solución
             costeMejor = min(a.costeAcomulado, costeMejor);
             break;
         }
-        else if (a.costeOptimista <= costeMejor) {
+        else if (a.costeOptimista <= costeMejor) {//Poda: si la cota pesimista de algun nodo, es mayor que la optimista de este, se descarta el nodo
             int prodID = a.prodID;
             for (int i = 0; i < supers; i++) {
-                if (a.counterSuper[i] < 3) {          
+                if (a.counterSuper[i] < 3) {//Poda: no se pueden comprar más de 3 productos en el mismo supermercado     
                     vector<int> counterSuper = a.counterSuper; counterSuper[i]++;
                     int costeAcomulado = a.costeAcomulado + superProducto[i][prodID];
                     int costeOptimista = costeAcomulado + cota_optimista(productos, supers, superProducto, prodID + 1);
                     int costePesimista = costeAcomulado + cota_pesimista(productos, supers, superProducto, prodID + 1);
-                    if (cotaOptimista <= costeMejor) {
+                    if (cotaOptimista <= costeMejor) {//Poda: si la cota pesimista de algun nodo, es mayor que la optimista de este, se descarta el nodo
                         nodos.push({ prodID + 1, costeAcomulado, costeOptimista, costePesimista, counterSuper });
-                        if (costePesimista < costeMejor)
+                        if (costePesimista < costeMejor)// Modificamos el coste mejor si la cota pesimista es más barata
                             costeMejor = costePesimista;
                     }
                 }
